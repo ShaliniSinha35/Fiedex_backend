@@ -12,11 +12,28 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static("public"));
 
 
+// $servername = "fiedex.com";
+
+
+
+//  $username = "u743095106_fiedex_user";
+
+//  $password = "osS?brJ=tO7";
+
+//  $dbname = "u743095106_fiedex_db";
+
+
+
 const connection = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database:"fiedex"
+  // host: "localhost",
+  // user: "root",
+  // password: "",
+  // database:"fiedex"
+
+  host: "fiedex.com",
+  user: "u743095106_fiedex_user",
+  password: "osS?brJ=tO7",
+  database:"u743095106_fiedex_db"
 });
 
 
