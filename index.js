@@ -12,15 +12,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static("public"));
 
 
-// $servername = "fiedex.com";
 
-
-
-//  $username = "u743095106_fiedex_user";
-
-//  $password = "osS?brJ=tO7";
-
-//  $dbname = "u743095106_fiedex_db";
 
 
 
@@ -67,7 +59,7 @@ app.post("/register", (req, res) => {
   const { name, mobile_number, country_code, email, password, refer_code } = req.body;
 
   // Check if email already exists
-  const emailCheckQuery = `SELECT COUNT(*) AS count FROM register WHERE email = ?`;
+  const emailCheckQuery = `SELECT COUNT(id) AS count FROM register WHERE email = ?`;
   connection.query(emailCheckQuery, [email], (err, result) => {
       if (err) {
           console.error('Error checking email existence: ' + err.stack);
@@ -104,7 +96,7 @@ app.get("/verify", (req, res) => {
 
     console.log(email, password);
 
-    const sql = `SELECT name, mobile_number, country_code, email, password, refer_code FROM register WHERE BINARY email = ? AND password = ?`;
+    const sql = `SELECT id, name, mobile_number, country_code, email, password, refer_code FROM register WHERE BINARY email = ? AND password = ?`;
     connection.query(sql, [email, password], (err, result) => {
         if (err) {
             console.error('Error searching for user: ' + err.stack);
@@ -126,12 +118,155 @@ app.get("/verify", (req, res) => {
 
 
 
+app.get("/quizQuestions",(req,res)=>{
+  // console.log("quizQuestions api")
+  connection.query(
+    "SELECT * FROM `question` WHERE STATUS ='Active'",
+    (error, results) => {
+      if (error) {
+        console.log(error);
+      } else {
+
+       
+        res.json(results);
+      }
+    }
+  );
+})
+
+
+app.get("/about",(req,res)=>{
+  connection.query(
+    "SELECT `page_menu`,`content` FROM `static_page` WHERE id = 12",
+    (error, results) => {
+      if (error) {
+        console.log(error);
+      } else {
+
+       
+        res.json(results);
+      }
+    }
+  );
+})
+
+app.get("/privacy",(req,res)=>{
+  connection.query(
+    "SELECT `page_menu`,`content` FROM `static_page` WHERE id = 13",
+    (error, results) => {
+      if (error) {
+        console.log(error);
+      } else {
+
+       
+        res.json(results);
+      }
+    }
+  );
+})
+app.get("/terms",(req,res)=>{
+  connection.query(
+    "SELECT `page_menu`,`content` FROM `static_page` WHERE id = 14",
+    (error, results) => {
+      if (error) {
+        console.log(error);
+      } else {
+
+       
+        res.json(results);
+      }
+    }
+  );
+})
+
+app.get("/socials",(req,res)=>{
+  
+  connection.query(
+    "SELECT `whatsapp`, `email`, `mobile_1` `cus_care_num` FROM `website_data`",
+    (error, results) => {
+      if (error) {
+        console.log(error);
+      } else {
+        res.json(results);
+      }
+    }
+  ); 
+})
+
+
+app.get("/wallet",(req,res)=>{
+  
+const {userId}= req.query
+  
+  const sql = `SELECT  user_id, amount FROM wallet_log WHERE user_id=? `
+  connection.query(sql, [userId], (err, result) => {
+      if (err) {
+          console.error(' No User Found ', userId );
+          return;
+      }
+      else{
+        res.json(result);
+      }
+
+  });
+})
+
+app.get("/updateWallet", (req, res) => {
+  const { userId, amount } = req.query;
+  console.log(userId, amount);
+
+  // First, retrieve the current amount from the database
+  const selectSql = `SELECT amount FROM wallet_log WHERE user_id = ?`;
+  connection.query(selectSql, [userId], (err, results) => {
+      if (err) {
+          console.error('Error fetching user data:', err);
+          res.status(500).send('Error fetching user data');
+          return;
+      }
+
+      if (results.length === 0) {
+          console.error('No User Found:', userId);
+          res.status(404).send('No User Found');
+          return;
+      }
+
+      // Parse the current amount and the new amount to integers
+      const currentAmount = parseInt(results[0].amount);
+      const newAmountToAdd = parseInt(amount);
+
+      // Check if the parsed values are valid numbers
+      if (isNaN(currentAmount) || isNaN(newAmountToAdd)) {
+          console.error('Invalid amount values');
+          res.status(400).send('Invalid amount values');
+          return;
+      }
+
+      // Calculate the new total amount
+      const newTotalAmount = currentAmount + newAmountToAdd;
+
+      // Update the amount in the database
+      const updateSql = `UPDATE wallet_log SET amount = ? WHERE user_id = ?`;
+      connection.query(updateSql, [newTotalAmount, userId], (err, result) => {
+          if (err) {
+              console.error('Error updating user data:', err);
+              res.status(500).send('Error updating user data');
+              return;
+          }
+
+          // Respond with the result of the update
+          res.json(result);
+      });
+  });
+});
 
 
 
 app.get("/",(req,res)=>{
      res.send("hello")
 })
+
+
+
 
 
 app.listen(port, () => {
