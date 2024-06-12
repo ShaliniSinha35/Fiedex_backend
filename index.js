@@ -1,7 +1,7 @@
 const express = require("express");
 const mysql = require("mysql");
 const app = express();
-const port = process.env.port || 3000;
+const port = process.env.port || 6000;
 const bodyParser = require("body-parser");
 const cors= require('cors');
 
@@ -13,15 +13,18 @@ app.use(express.static("public"));
 
 
 
-
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', true); 
+  next();
+});
 
 
 const connection = mysql.createPool({
-  // host: "localhost",
-  // user: "root",
-  // password: "",
-  // database:"fiedex"
-
+  
+  
   host: "fiedex.com",
   user: "u743095106_fiedex_user",
   password: "osS?brJ=tO7",
@@ -47,10 +50,6 @@ function handleDisconnect() {
 }
 
 handleDisconnect();
-
-
-
-
 
 
 
@@ -194,6 +193,30 @@ app.get("/socials",(req,res)=>{
 })
 
 
+
+
+
+
+app.get("/walletDetails",(req,res)=>{
+  
+  const {userId}= req.query
+    
+    const sql = `SELECT user_id, amount FROM wallet_log`
+    connection.query(sql, [userId], (err, result) => {
+        if (err) {
+            console.error(' No User Found ');
+            return;
+        }
+        else{
+          
+
+
+          res.json(result);
+        }
+  
+    });
+  })
+
 app.get("/wallet",(req,res)=>{
   
 const {userId}= req.query
@@ -212,33 +235,57 @@ const {userId}= req.query
 })
 
 app.get("/updateWallet", (req, res) => {
+  console.log("update wallet is called");
   const { userId, amount } = req.query;
-  console.log(userId, amount);
 
-  // First, retrieve the current amount from the database
+  // Parse amount to integer
+  const newAmountToAdd = parseInt(amount);
+
+  // Check if userId and amount are valid
+  if (!userId || !newAmountToAdd || isNaN(newAmountToAdd)) {
+    console.error("Invalid userId or amount");
+    res.status(400).send("Invalid userId or amount");
+    return;
+  }
+
+  // First, try to retrieve the current amount from the database
   const selectSql = `SELECT amount FROM wallet_log WHERE user_id = ?`;
   connection.query(selectSql, [userId], (err, results) => {
-      if (err) {
-          console.error('Error fetching user data:', err);
-          res.status(500).send('Error fetching user data');
-          return;
-      }
+    if (err) {
+      console.error("Error fetching user data:", err);
+      res.status(500).send("Error fetching user data");
+      return;
+    }
 
-      if (results.length === 0) {
-          console.error('No User Found:', userId);
-          res.status(404).send('No User Found');
-          return;
-      }
+    // Check if the user exists in the database
+    const userExists = results.length > 0;
 
-      // Parse the current amount and the new amount to integers
+    // If the user doesn't exist, insert a new record
+    if (!userExists) {
+      const insertSql = `INSERT INTO wallet_log (user_id, amount, cdate, cby, status) VALUES (?, ?, NOW(), ?, '1')`;
+      connection.query(
+        insertSql,
+        [userId, newAmountToAdd, userId],
+        (insertErr, insertResult) => {
+          if (insertErr) {
+            console.error("Error inserting wallet data:", insertErr);
+            res.status(500).send("Error inserting wallet data");
+            return;
+          }
+
+          console.log("Insert successful for new user");
+          res.json(insertResult);
+        }
+      );
+    } else {
+      // User exists, update the existing record
       const currentAmount = parseInt(results[0].amount);
-      const newAmountToAdd = parseInt(amount);
 
-      // Check if the parsed values are valid numbers
-      if (isNaN(currentAmount) || isNaN(newAmountToAdd)) {
-          console.error('Invalid amount values');
-          res.status(400).send('Invalid amount values');
-          return;
+      // Check if the current amount is a valid number
+      if (isNaN(currentAmount)) {
+        console.error("Invalid current amount value in database");
+        res.status(500).send("Invalid current amount value in database");
+        return;
       }
 
       // Calculate the new total amount
@@ -246,27 +293,29 @@ app.get("/updateWallet", (req, res) => {
 
       // Update the amount in the database
       const updateSql = `UPDATE wallet_log SET amount = ? WHERE user_id = ?`;
-      connection.query(updateSql, [newTotalAmount, userId], (err, result) => {
-          if (err) {
-              console.error('Error updating user data:', err);
-              res.status(500).send('Error updating user data');
-              return;
+      connection.query(
+        updateSql,
+        [newTotalAmount, userId],
+        (updateErr, updateResult) => {
+          if (updateErr) {
+            console.error("Error updating user data:", updateErr);
+            res.status(500).send("Error updating user data");
+            return;
           }
 
-          // Respond with the result of the update
-          res.json(result);
-      });
+          console.log("Wallet amount updated successfully");
+          res.json(updateResult);
+        }
+      );
+    }
   });
 });
 
 
 
 app.get("/",(req,res)=>{
-     res.send("hello")
+     res.send("hello from fiedex")
 })
-
-
-
 
 
 app.listen(port, () => {
